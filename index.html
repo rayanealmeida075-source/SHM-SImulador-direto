@@ -1,329 +1,87 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Monitoramento Estrutural - Simulação Direta</title>
-    <!-- Chart.js para geração de gráficos -->
+    <title>Simulador SHM - Interligado</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            background-color: #0F172A;
-            color: #F8FAFC;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-        }
-
-        .header {
-            background-color: #1E293B;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #F8FAFC;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .live-indicator {
-            font-size: 0.85rem;
-            color: #10B981;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .pulse-dot {
-            width: 10px;
-            height: 10px;
-            background-color: #10B981;
-            border-radius: 50%;
-            display: inline-block;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
-
-        .kpi-container {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            justify-content: space-between;
-        }
-
-        .kpi-card {
-            background-color: #1E293B;
-            flex: 1;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            border-top: 4px solid #3B82F6;
-        }
-
-        .kpi-title {
-            font-size: 0.8rem;
-            color: #94A3B8;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .kpi-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        .controls {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            background-color: #1E293B;
-            padding: 15px;
-            border-radius: 8px;
-        }
-
-        button {
-            padding: 10px 20px;
-            background-color: #3B82F6;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        button:hover {
-            background-color: #2563EB;
-        }
-
-        button.danger {
-            background-color: #EF4444;
-        }
-
-        button.danger:hover {
-            background-color: #DC2626;
-        }
-
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-            gap: 20px;
-        }
-
-        .chart-card {
-            background-color: #1E293B;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        canvas {
-            max-width: 100%;
-        }
-
-        .status-badge {
-            font-size: 0.85rem;
-            color: #10B981;
-            font-weight: 500;
-        }
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: #fff; padding: 20px; text-align: center; }
+        .card { background: #162447; padding: 20px; margin: 20px auto; border-radius: 8px; max-width: 600px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        #painelSimulador { display: none; }
+        #ecraBloqueio { border: 2px solid #e43f5a; }
+        #erroAcesso { color: #e43f5a; font-weight: bold; font-size: 1.1em; }
+        .valor-destaque { font-size: 1.8em; color: #2ecc71; font-weight: bold; }
+        button { padding: 10px 20px; background: #e43f5a; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #d2324d; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <span>⚡ PAINEL DE MONITORAMENTO ESTRUTURAL (SIMULAÇÃO DIRETA)</span>
-        <div class="live-indicator">
-            <span class="pulse-dot"></span>
-            <span id="txtLiveStatus">SIMULAÇÃO ATIVA</span>
-        </div>
+    <!-- Ecrã de Bloqueio (Caso aceda sem a chave correta) -->
+    <div id="ecraBloqueio" class="card">
+        <h2>🔒 Acesso Restrito</h2>
+        <p id="erroAcesso">Chave de interligação ausente ou inválida.</p>
+        <p>Para aceder, utilize o formato de URL correto: <br><code>https://seu-usuario.github.io/seu-repositorio/?chave=sua_senha</code></p>
     </div>
 
-    <!-- Controles da Simulação -->
-    <div class="controls">
-        <button id="btnPausar" onclick="alternarSimulacion()">Pausar Simulação</button>
-        <button class="danger" onclick="injetarVibracaoExtrema()">Injetar Anomalia/Vibração</button>
-        <span id="lastUpdate" class="status-badge">Rodando em tempo real...</span>
-    </div>
+    <!-- Painel do Simulador (Só liberta se a chave bater certo) -->
+    <div id="painelSimulador">
+        <h1>Painel de Monitoramento Estrutural (SHM)</h1>
+        
+        <div class="card">
+            <p>Status: <span style="color: #2ecc71; font-weight: bold;">● Conectado com Sucesso</span></p>
+            <p>Chave validada: <span id="chaveExibida" style="color: #3498db; font-weight: bold;"></span></p>
+        </div>
 
-    <!-- Indicadores KPI -->
-    <div class="kpi-container">
-        <div class="kpi-card" style="border-color: #3B82F6;">
-            <div class="kpi-title">STATUS ESTRUTURAL</div>
-            <div class="kpi-value" id="kpiStatus">Normal</div>
-        </div>
-        <div class="kpi-card" style="border-color: #10B981;">
-            <div class="kpi-title">ACELERAÇÃO MÁX. Z (g)</div>
-            <div class="kpi-value" id="kpiMaxZ">0.0000</div>
-        </div>
-        <div class="kpi-card" style="border-color: #F59E0B;">
-            <div class="kpi-title">TOTAL DE LEITURAS</div>
-            <div class="kpi-value" id="kpiLeituras">0</div>
-        </div>
-    </div>
-
-    <!-- Gráficos -->
-    <div class="charts-grid">
-        <div class="chart-card">
-            <canvas id="chartAceleracao"></canvas>
-        </div>
-        <div class="chart-card">
-            <canvas id="chartFFT"></canvas>
+        <div class="card">
+            <h3>Aceleração Máx. Z (g)</h3>
+            <div id="maxZ" class="valor-destaque">1.0000</div>
+            <p style="margin-top: 15px;">Total de Leituras: <span id="totalLeituras">0</span></p>
+            <button id="btnPausar">Pausar Simulação</button>
         </div>
     </div>
 
     <script>
-        let chartAcelInstance = null;
-        let chartFFTInstance = null;
+        // Defina aqui a sua chave secreta mestra exigida para interligar
+        const CHAVE_MESTRE = "engenharia2026_shm";
+
+        // Lê os parâmetros passados na URL do navegador
+        const urlParams = new URLSearchParams(window.location.search);
+        const chaveInformada = urlParams.get('chave');
+
+        // Validação da chave de interligação
+        if (chaveInformada === CHAVE_MESTRE) {
+            // Se a chave estiver correta:
+            document.getElementById('ecraBloqueio').style.display = 'none';
+            document.getElementById('painelSimulador').style.display = 'block';
+            document.getElementById('chaveExibida').innerText = chaveInformada;
+
+            // Inicia o simulador
+            iniciarSimulador();
+        } else {
+            // Se a chave estiver errada ou em falta
+            console.warn("Acesso negado: chave incorreta ou não informada.");
+        }
+
+        // Lógica em tempo real do simulador
         let simulando = true;
-        let tempoTotal = 0;
-        let totalLeituras = 0;
-        let maxZGlobal = 0;
-        let fatorAnomalia = 1.0;
+        let contador = 0;
 
-        const MAX_PONTOS = 100;
-
-        function inicializarGraficos() {
-            const ctxAcel = document.getElementById('chartAceleracao').getContext('2d');
-            chartAcelInstance = new Chart(ctxAcel, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [
-                        { label: 'Eixo X', data: [], borderColor: '#EF4444', borderWidth: 1.5, fill: false, pointRadius: 0 },
-                        { label: 'Eixo Y', data: [], borderColor: '#10B981', borderWidth: 1.5, fill: false, pointRadius: 0 },
-                        { label: 'Eixo Z', data: [], borderColor: '#3B82F6', borderWidth: 1.5, fill: false, pointRadius: 0 }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    animation: false,
-                    plugins: {
-                        title: { display: true, text: '1. Tendência Temporal de Aceleração (X, Y, Z)', color: '#F8FAFC' },
-                        legend: { labels: { color: '#CBD5E1' } }
-                    },
-                    scales: {
-                        x: { ticks: { color: '#CBD5E1' }, grid: { color: '#334155' } },
-                        y: { ticks: { color: '#CBD5E1' }, grid: { color: '#334155' }, suggestedMin: -1.5, suggestedMax: 1.5 }
-                    }
-                }
-            });
-
-            const ctxFFT = document.getElementById('chartFFT').getContext('2d');
-            chartFFTInstance = new Chart(ctxFFT, {
-                type: 'bar',
-                data: {
-                    labels: ['2.5 Hz', '5.0 Hz', '7.5 Hz', '10.0 Hz', '12.5 Hz', '15.0 Hz', '20.0 Hz'],
-                    datasets: [{
-                        label: 'Magnitude Z (g)',
-                        data: [0.05, 0.12, 0.08, 0.25, 0.09, 0.04, 0.02],
-                        backgroundColor: '#8B5CF6'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    animation: false,
-                    plugins: {
-                        title: { display: true, text: '2. Espectro de Frequência - Eixo Z (FFT)', color: '#F8FAFC' },
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: { ticks: { color: '#CBD5E1' }, grid: { color: '#334155' } },
-                        y: { ticks: { color: '#CBD5E1' }, grid: { color: '#334155' } }
-                    }
-                }
-            });
-        }
-
-        function cicloSimulacao() {
-            if (!simulando) return;
-
-            tempoTotal += 0.1;
-            totalLeituras++;
-
-            let x = (Math.sin(tempoTotal * 3) * 0.1 + (Math.random() - 0.5) * 0.05) * fatorAnomalia;
-            let y = (Math.cos(tempoTotal * 2.5) * 0.1 + (Math.random() - 0.5) * 0.05) * fatorAnomalia;
-            let z = (Math.sin(tempoTotal * 5) * 0.2 + 0.98 + (Math.random() - 0.5) * 0.08) * fatorAnomalia;
-
-            if (Math.abs(z) > maxZGlobal) {
-                maxZGlobal = Math.abs(z);
-            }
-
-            let statusStr = "Normal";
-            let corStatus = "#10B981";
-            if (fatorAnomalia > 1.5) {
-                statusStr = "Alerta: Vibração Alta!";
-                corStatus = "#EF4444";
-            }
-            document.getElementById('kpiStatus').innerText = statusStr;
-            document.getElementById('kpiStatus').style.color = corStatus;
-            document.getElementById('kpiMaxZ').innerText = maxZGlobal.toFixed(4);
-            document.getElementById('kpiLeituras').innerText = totalLeituras.toLocaleString('pt-BR');
-
-            let labels = chartAcelInstance.data.labels;
-            let dataX = chartAcelInstance.data.datasets[0].data;
-            let dataY = chartAcelInstance.data.datasets[1].data;
-            let dataZ = chartAcelInstance.data.datasets[2].data;
-
-            labels.push(tempoTotal.toFixed(1));
-            dataX.push(x.toFixed(4));
-            dataY.push(y.toFixed(4));
-            dataZ.push(z.toFixed(4));
-
-            if (labels.length > MAX_PONTOS) {
-                labels.shift();
-                dataX.shift();
-                dataY.shift();
-                dataZ.shift();
-            }
-
-            chartAcelInstance.update('none');
-
-            let fftData = chartFFTInstance.data.datasets[0].data.map(val => {
-                let baseVal = parseFloat(val);
-                return Math.max(0.01, (baseVal + (Math.random() - 0.5) * 0.05) * (fatorAnomalia > 1 ? 1.2 : 1.0)).toFixed(4);
-            });
-            chartFFTInstance.data.datasets[0].data = fftData;
-            chartFFTInstance.update('none');
-
-            if (fatorAnomalia > 1.0) {
-                fatorAnomalia -= 0.02;
-                if (fatorAnomalia < 1.0) fatorAnomalia = 1.0;
-            }
-
-            document.getElementById('lastUpdate').innerText = 'Atualizado em ' + new Date().toLocaleTimeString();
-        }
-
-        function alternarSimulacion() {
+        document.getElementById('btnPausar').addEventListener('click', () => {
             simulando = !simulando;
-            const btn = document.getElementById('btnPausar');
-            const txt = document.getElementById('txtLiveStatus');
-            if (simulando) {
-                btn.innerText = "Pausar Simulação";
-                btn.style.backgroundColor = "#3B82F6";
-                txt.innerText = "SIMULAÇÃO ATIVA";
-            } else {
-                btn.innerText = "Retomar Simulação";
-                btn.style.backgroundColor = "#10B981";
-                txt.innerText = "PAUSADO";
-            }
-        }
+            document.getElementById('btnPausar').innerText = simulando ? "Pausar Simulação" : "Retomar Simulação";
+        });
 
-        function injetarVibracaoExtrema() {
-            fatorAnomalia = 2.5;
+        function iniciarSimulador() {
+            setInterval(() => {
+                if (!simulando) return;
+                contador++;
+                let zSimulado = (Math.random() * 0.3 + 1.0).toFixed(4);
+                document.getElementById('maxZ').innerText = zSimulado;
+                document.getElementById('totalLeituras').innerText = contador;
+            }, 1000);
         }
-
-        inicializarGraficos();
-        setInterval(cicloSimulacao, 100);
     </script>
+
 </body>
 </html>
